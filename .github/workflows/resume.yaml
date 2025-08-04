@@ -1,34 +1,42 @@
-name: Docker Workflow
+name: Deploy Resume WebApp to EC2
 
 on:
-  - push
+  push:
+    branches:
+      - main
 
-env:
-    CONTAINER_REGISTRY: docker.io
-    IMAGE_NAME: pengpeng-resume-app
-
-jobs: 
-  docker_build: 
+jobs:
+  deploy:
+    environment: prod
+    name: Deploy to EC2
     runs-on: ubuntu-latest
+
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout the files
+        uses: actions/checkout@v4
 
-    - name: Docker Build
-      run: docker build -t ${{ env.CONTAINER_REGISTRY }}/${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest .
+      - name: Deploy to Server
+        uses: easingthemes/ssh-deploy@main
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.HOST_DNS }}
+          REMOTE_USER: ${{ secrets.EC2_USER }}
+          TARGET: ${{ secrets.TARGET_DIR }}
 
-    - name: Docker Login
-      run: docker login --username=${{ vars.DOCKER_USERNAME }} --password=${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Docker Publish 
-      run: docker push ${{ env.CONTAINER_REGISTRY }}/${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-
-  docker_deploy:
-    needs: docker_build
-    runs-on: ubuntu-latest 
-    steps:
-        - name: Docker Login
-          run: docker login --username=${{ vars.DOCKER_USERNAME }} --password=${{ secrets.DOCKER_PASSWORD }}
-
-        - name: Docker Run
-          run: docker run -d -p 8080:80 ${{ env.CONTAINER_REGISTRY }}/${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+      - name: Executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_DNS }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo apt-get -y update
+            sudo apt-get install -y apache2
+            sudo systemctl daemon-reload
+            sudo systemctl start apache2
+            sudo systemctl enable apache2
+            cd home
+            # Remove existing contents of /var/www/html
+            sudo rm -rf /var/www/html/*
+            # Move new files to /var/www/html
+            sudo mv * /var/www/html
