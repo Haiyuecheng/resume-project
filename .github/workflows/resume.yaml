@@ -5,9 +5,9 @@ on:
 
 env:
     CONTAINER_REGISTRY: docker.io
-    DOCKER_USERNAME: efotsowoe
-    DOCKER_PASSWORD: ricewater!!233
-    IMAGE_NAME: resume-app
+    DOCKER_USERNAME: bronzy622
+    DOCKER_PASSWORD: Liangcailu104@
+    IMAGE_NAME: baima-resume-app
 
 jobs: 
   docker_build: 
